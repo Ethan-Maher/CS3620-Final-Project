@@ -1,261 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 
-const genreOptions = [
-  "Sci-fi",
-  "Thriller",
-  "Drama",
-  "Comedy",
-  "Animation",
-  "Documentary",
-];
-
-const vibeOptions = [
-  "Adventurous",
-  "Edge-of-seat",
-  "Feel-good",
-  "Slow burn",
-  "Mind-bender",
-  "Mood boost",
-];
-
-const ratingOrder = { G: 1, PG: 2, "PG-13": 3, R: 4 };
-
-const curatedPool = [
-  {
-    title: "Midnight Courier",
-    genres: ["Thriller"],
-    vibe: "Edge-of-seat",
-    runtime: 112,
-    rating: "PG-13",
-    score: 92,
-    synopsis:
-      "A bike messenger uncovers a covert exchange that forces her into a frantic overnight sprint across the city.",
-    cast: ["Ana Cruz", "Elijah Brooks"],
-    director: "N. Hartmann",
-  },
-  {
-    title: "Parallax Garden",
-    genres: ["Sci-fi", "Drama"],
-    vibe: "Mind-bender",
-    runtime: 124,
-    rating: "PG-13",
-    score: 95,
-    synopsis:
-      "An architect discovers a lab that grows memories into living spaces, forcing her to design her own past.",
-    cast: ["Mila Rhee", "Caleb Knox"],
-    director: "Rumi Takeda",
-  },
-  {
-    title: "Sunlit Alley",
-    genres: ["Feel-good", "Comedy", "Drama"],
-    vibe: "Feel-good",
-    runtime: 103,
-    rating: "PG",
-    score: 88,
-    synopsis:
-      "A street food vendor and a retiree open a micro-restaurant that reunites a fractured neighborhood.",
-    cast: ["Isabel Moreno", "Gianni Costa"],
-    director: "Priya Raman",
-  },
-  {
-    title: "Horizon Sketches",
-    genres: ["Documentary"],
-    vibe: "Slow burn",
-    runtime: 96,
-    rating: "G",
-    score: 86,
-    synopsis:
-      "Portraits of five indie artists capturing sunrise every morning for a year to document creative discipline.",
-    cast: ["Documentary"],
-    director: "Leah Sato",
-  },
-];
-
-const favorites = {
-  genres: ["Neo-noir", "Coming-of-age", "Historical epics"],
-  actors: ["Tessa Lane", "Idris Cole", "Wen Li"],
-  directors: ["Ava Martin", "Jonas K", "Mara Ito"],
-};
-
-const reviewFeed = [
-  {
-    film: "Parallax Garden",
-    quote: "The set design earns every surreal turn. Felt handcrafted but sleek.",
-    score: 4.7,
-    user: "Lena D",
-  },
-  {
-    film: "Midnight Courier",
-    quote: "Lean, tense, and the city feels like a character driving the plot.",
-    score: 4.4,
-    user: "Qian L",
-  },
-  {
-    film: "Sunlit Alley",
-    quote: "Soft edges without losing momentum. Perfect Sunday watch.",
-    score: 4.3,
-    user: "Mase M",
-  },
-];
-
-const users = [
-  {
-    user_id: "U-1842",
-    user_name: "Elliot Rivers",
-    email: "elliot@watch.me",
-    password: "argon2id$demo$9c1b",
-  },
-];
-
-const previousSearches = [
-  {
-    user_id: "U-1842",
-    search_id: "S-561",
-    prev_director: "Rumi Takeda",
-    prev_genre: "Sci-fi",
-    prev_decade: "2010s",
-  },
-  {
-    user_id: "U-1842",
-    search_id: "S-562",
-    prev_director: "N. Hartmann",
-    prev_genre: "Thriller",
-    prev_decade: "2020s",
-  },
-  {
-    user_id: "U-1842",
-    search_id: "S-563",
-    prev_director: "Priya Raman",
-    prev_genre: "Comedy",
-    prev_decade: "2010s",
-  },
-];
-
-const favoriteTable = [
-  { user_id: "U-1842", fav_director: "Rumi Takeda", fav_genre: "Sci-fi", fav_decade: "2010s" },
-  { user_id: "U-1842", fav_director: "Priya Raman", fav_genre: "Comedy", fav_decade: "2020s" },
-  { user_id: "U-1842", fav_director: "Ava Martin", fav_genre: "Drama", fav_decade: "1990s" },
-];
-
-const directors = [
-  { director_id: "D-101", director_name: "N. Hartmann" },
-  { director_id: "D-102", director_name: "Rumi Takeda" },
-  { director_id: "D-103", director_name: "Priya Raman" },
-  { director_id: "D-104", director_name: "Leah Sato" },
-];
-
-const genresTable = [
-  { genre_id: "G-1", genre_name: "Sci-fi" },
-  { genre_id: "G-2", genre_name: "Thriller" },
-  { genre_id: "G-3", genre_name: "Comedy" },
-  { genre_id: "G-4", genre_name: "Drama" },
-  { genre_id: "G-5", genre_name: "Documentary" },
-];
-
-const actors = [
-  { actor_id: "A-201", name: "Ana Cruz" },
-  { actor_id: "A-202", name: "Elijah Brooks" },
-  { actor_id: "A-203", name: "Mila Rhee" },
-  { actor_id: "A-204", name: "Caleb Knox" },
-  { actor_id: "A-205", name: "Isabel Moreno" },
-  { actor_id: "A-206", name: "Gianni Costa" },
-];
-
-const languages = [
-  { language_id: "L-1", language_name: "English" },
-  { language_id: "L-2", language_name: "Spanish" },
-  { language_id: "L-3", language_name: "Japanese" },
-];
-
-const films = [
-  {
-    film_id: "F-101",
-    film_name: "Midnight Courier",
-    director_id: "D-101",
-    year: 2023,
-    runtime: 112,
-    genre_id: "G-2",
-    language_id: "L-1",
-  },
-  {
-    film_id: "F-102",
-    film_name: "Parallax Garden",
-    director_id: "D-102",
-    year: 2022,
-    runtime: 124,
-    genre_id: "G-1",
-    language_id: "L-3",
-  },
-  {
-    film_id: "F-103",
-    film_name: "Sunlit Alley",
-    director_id: "D-103",
-    year: 2020,
-    runtime: 103,
-    genre_id: "G-3",
-    language_id: "L-2",
-  },
-  {
-    film_id: "F-104",
-    film_name: "Horizon Sketches",
-    director_id: "D-104",
-    year: 2019,
-    runtime: 96,
-    genre_id: "G-5",
-    language_id: "L-1",
-  },
-];
-
-const movieRatings = [
-  {
-    film_id: "F-101",
-    user_id: "U-1842",
-    user_rating: 4.5,
-    user_review: "Lean and urgent. Loved the night pacing.",
-  },
-  {
-    film_id: "F-102",
-    user_id: "U-1842",
-    user_rating: 4.8,
-    user_review: "Gorgeous production design with a tight script.",
-  },
-  {
-    film_id: "F-103",
-    user_id: "U-1842",
-    user_rating: 4.2,
-    user_review: "Comfort watch with real heart.",
-  },
-];
-
-const averageRatings = [
-  { film_id: "F-101", average_score: 4.4 },
-  { film_id: "F-102", average_score: 4.7 },
-  { film_id: "F-103", average_score: 4.3 },
-  { film_id: "F-104", average_score: 4.1 },
-];
-
-const actedIn = [
-  { film_id: "F-101", actor_id: "A-201" },
-  { film_id: "F-101", actor_id: "A-202" },
-  { film_id: "F-102", actor_id: "A-203" },
-  { film_id: "F-102", actor_id: "A-204" },
-  { film_id: "F-103", actor_id: "A-205" },
-  { film_id: "F-103", actor_id: "A-206" },
-];
-
-function Pill({ label, active, onClick, accent = "bg-cyan-400", variant = "default" }) {
-  const baseStyles = "group flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-medium transition";
-  
+function Pill({ label, active, onClick, variant = "default" }) {
   if (variant === "chip") {
     return (
       <button
         onClick={onClick}
-        className={`rounded-md border px-2.5 py-1.5 text-xs font-medium transition ${
+        className={`rounded-full px-4 py-2 text-sm font-medium transition ${
           active
-            ? "border-emerald-400/60 bg-emerald-500/20 text-emerald-50 shadow-sm shadow-emerald-500/10"
-            : "border-slate-700/50 bg-slate-800/50 text-slate-300 hover:border-slate-600 hover:bg-slate-700/50 hover:text-white"
+            ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
+            : "bg-slate-800/50 text-slate-400 hover:bg-slate-700/50 hover:text-slate-300 border border-slate-700/50"
         }`}
       >
         {label}
@@ -266,90 +21,140 @@ function Pill({ label, active, onClick, accent = "bg-cyan-400", variant = "defau
   return (
     <button
       onClick={onClick}
-      className={`${baseStyles} ${
+      className={`rounded-lg px-4 py-2.5 text-sm font-medium transition ${
         active
-          ? "border-cyan-400/60 bg-cyan-500/20 text-cyan-50 shadow-sm shadow-cyan-500/20"
-          : "border-slate-700/50 bg-slate-800/50 text-slate-300 hover:border-slate-600 hover:bg-slate-700/50 hover:text-white"
+          ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
+          : "bg-slate-800/50 text-slate-400 hover:bg-slate-700/50 hover:text-slate-300 border border-slate-700/50"
       }`}
     >
-      <span
-        className={`h-2 w-2 rounded-full transition ${active ? accent : "bg-slate-500"}`}
-      />
       {label}
     </button>
   );
 }
 
-function SectionCard({ title, children, dense = false, className = "" }) {
-  return (
-    <div
-      className={`rounded-xl border border-slate-800/50 bg-slate-900/60 backdrop-blur-sm shadow-lg ${
-        dense ? "p-5" : "p-6"
-      } ${className}`}
-    >
-      {title && (
-        <h3 className="mb-4 text-lg font-semibold text-white">{title}</h3>
-      )}
-      {children}
-    </div>
-  );
-}
-
 export default function DashboardPage() {
-  const [genre, setGenre] = useState("Sci-fi");
-  const [vibe, setVibe] = useState("Adventurous");
+  const [genre, setGenre] = useState("");
   const [runtime, setRuntime] = useState(115);
-  const [maxRating, setMaxRating] = useState("PG-13");
-  const [showFilters, setShowFilters] = useState(false);
+  const [maxRating, setMaxRating] = useState("R");
   const [selectedActors, setSelectedActors] = useState([]);
-  const [selectedDirectors, setSelectedDirectors] = useState([]);
-  const [yearRange, setYearRange] = useState([2010, 2024]);
+  const [yearRange, setYearRange] = useState([1900, 2024]);
   const [minRating, setMinRating] = useState(0);
+  const [minVotes, setMinVotes] = useState(0);
+  const [sortBy, setSortBy] = useState("rating");
+  const [titleSearch, setTitleSearch] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  
+  const [movies, setMovies] = useState([]);
+  const [genreOptions, setGenreOptions] = useState([]);
+  const [actorOptions, setActorOptions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [genresLoaded, setGenresLoaded] = useState(false);
 
-  const directorLookup = useMemo(
-    () =>
-      Object.fromEntries(
-        directors.map((director) => [director.director_id, director.director_name])
-      ),
-    []
-  );
-  const genreLookup = useMemo(
-    () =>
-      Object.fromEntries(genresTable.map((genre) => [genre.genre_id, genre.genre_name])),
-    []
-  );
-  const languageLookup = useMemo(
-    () =>
-      Object.fromEntries(
-        languages.map((language) => [language.language_id, language.language_name])
-      ),
-    []
-  );
-  const actorLookup = useMemo(
-    () => Object.fromEntries(actors.map((actor) => [actor.actor_id, actor.name])),
-    []
-  );
-  const filmLookup = useMemo(
-    () => Object.fromEntries(films.map((film) => [film.film_id, film])),
-    []
-  );
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        setLoading(true);
+        const [genresRes, actorsRes] = await Promise.all([
+          fetch("/api/genres"),
+          fetch("/api/actors")
+        ]);
+
+        const genresData = await genresRes.json();
+        const actorsData = await actorsRes.json();
+
+        if (genresData.success) {
+          setGenreOptions(genresData.genres || []);
+          setGenresLoaded(true);
+        } else {
+          setGenresLoaded(true);
+        }
+
+        if (actorsData.success) {
+          setActorOptions(actorsData.actors || []);
+        }
+      } catch (err) {
+        console.error("Error fetching initial data:", err);
+        setError("Failed to load data: " + err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInitialData();
+  }, []);
+
+  useEffect(() => {
+    const fetchMovies = async () => {
+      if (!genresLoaded) return;
+      
+      setLoading(true);
+      setError(null);
+
+      try {
+        const params = new URLSearchParams();
+        if (genre && genre !== "") params.append("genre", genre);
+        if (maxRating) params.append("maxRating", maxRating);
+        params.append("maxRuntime", runtime);
+        params.append("yearFrom", yearRange[0]);
+        params.append("yearTo", yearRange[1]);
+        if (minRating > 0) params.append("minRating", minRating);
+        if (minVotes > 0) params.append("minVotes", minVotes);
+        if (selectedActors.length > 0) params.append("actors", selectedActors.join(","));
+        if (titleSearch) params.append("titleSearch", titleSearch);
+        params.append("sortBy", sortBy);
+        params.append("limit", "100");
+
+        const response = await fetch(`/api/movies?${params.toString()}`);
+        const data = await response.json();
+
+        if (data.success) {
+          setMovies(data.movies || []);
+          if (data.movies && data.movies.length === 0) {
+            setError("No movies found matching your criteria.");
+          }
+        } else {
+          setError(data.error || "Failed to fetch movies");
+        }
+      } catch (err) {
+        console.error("Error fetching movies:", err);
+        setError(`Failed to load movies: ${err.message}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMovies();
+  }, [genre, maxRating, runtime, yearRange, minRating, minVotes, selectedActors, sortBy, titleSearch, genresLoaded]);
 
   const recommendation = useMemo(() => {
-    const filtered = curatedPool.filter(
-      (movie) =>
-        movie.genres.includes(genre) &&
-        movie.vibe === vibe &&
-        ratingOrder[movie.rating] <= ratingOrder[maxRating]
-    );
+    if (movies.length === 0) return null;
+    
+    const sorted = [...movies].sort((a, b) => {
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+      const aRuntimeDiff = Math.abs(a.runtime - runtime);
+      const bRuntimeDiff = Math.abs(b.runtime - runtime);
+      return aRuntimeDiff - bRuntimeDiff;
+    });
 
-    return filtered[0] ?? curatedPool[0];
-  }, [genre, maxRating, vibe]);
+    return sorted[0];
+  }, [movies, runtime]);
 
-  const matchConfidence = useMemo(() => {
-    const base = recommendation.score;
-    const runtimePenalty = Math.abs(recommendation.runtime - runtime) * 0.35;
-    return Math.min(99, Math.max(70, Math.round(base - runtimePenalty)));
-  }, [recommendation, runtime]);
+  const primaryGenres = useMemo(() => genreOptions.slice(0, 8), [genreOptions]);
+  const topActors = useMemo(() => actorOptions.slice(0, 50), [actorOptions]);
+  const sortLabel = useMemo(() => {
+    const labels = {
+      rating: "Rating",
+      votes: "Votes",
+      year: "Newest first",
+      year_old: "Oldest first",
+      runtime: "Shortest runtime",
+      runtime_long: "Longest runtime"
+    };
+    return labels[sortBy] || "Rating";
+  }, [sortBy]);
 
   const toggleActor = (actorName) => {
     setSelectedActors(prev =>
@@ -359,49 +164,71 @@ export default function DashboardPage() {
     );
   };
 
-  const toggleDirector = (directorName) => {
-    setSelectedDirectors(prev =>
-      prev.includes(directorName)
-        ? prev.filter(d => d !== directorName)
-        : [...prev, directorName]
-    );
+  const clearAllFilters = () => {
+    setGenre("");
+    setSelectedActors([]);
+    setYearRange([1900, 2024]);
+    setMinRating(0);
+    setMinVotes(0);
+    setTitleSearch("");
+    setSortBy("rating");
+    setRuntime(115);
+    setMaxRating("R");
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 text-slate-50">
-      <div className="pointer-events-none fixed inset-0">
-        <div className="absolute left-0 top-0 h-96 w-96 rounded-full bg-cyan-500/8 blur-[120px]" />
-        <div className="absolute right-0 top-1/4 h-80 w-80 rounded-full bg-indigo-500/8 blur-[100px]" />
-        <div className="absolute bottom-0 left-1/3 h-64 w-64 rounded-full bg-purple-500/6 blur-[80px]" />
-      </div>
-
-      <header className="relative z-10 mx-auto max-w-7xl px-6 pt-10 pb-12">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 via-cyan-500 to-indigo-500 text-slate-950 font-bold text-lg shadow-lg shadow-cyan-500/30">
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      <header className="border-b border-slate-800/80 bg-slate-950/95 backdrop-blur-md sticky top-0 z-50 shadow-lg shadow-black/20">
+        <div className="mx-auto max-w-7xl px-6 py-5">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 via-cyan-500 to-indigo-500 text-slate-950 font-bold text-xl shadow-lg shadow-cyan-500/30">
             W
           </div>
-          <div>
-            <h1 className="text-2xl font-semibold text-white">WhatToWatch</h1>
-            <p className="text-sm text-slate-400 mt-0.5">Find your next favorite film</p>
+            <div className="flex-1">
+              <h1 className="text-xl font-bold text-white tracking-tight">WhatToWatch</h1>
+              <p className="text-xs text-slate-400 mt-0.5">Discover your next favorite film</p>
+            </div>
+            {movies.length > 0 && (
+              <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-900/60 border border-slate-800/50">
+                <span className="text-sm font-medium text-cyan-400">{movies.length}</span>
+                <span className="text-xs text-slate-400">{movies.length === 1 ? 'match' : 'matches'}</span>
+              </div>
+            )}
           </div>
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto max-w-7xl px-6 pb-20">
-        <div className="grid gap-6 lg:grid-cols-[1.1fr,1fr,0.9fr]">
-          {/* Left Column: Search Preferences */}
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-semibold text-white mb-1.5">What are you in the mood for?</h2>
-              <p className="text-slate-400 text-sm">Select your preferences to find the perfect match</p>
+      <main className="mx-auto max-w-7xl px-6 py-8">
+        <div className="flex flex-col gap-6 lg:flex-row">
+          {/* Left Sidebar - Filters */}
+          <aside className="w-full flex-shrink-0 space-y-4 lg:w-80">
+            <section className="rounded-xl bg-slate-900/60 border border-slate-800/50 p-6 space-y-5">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-semibold text-white">Filters</h3>
+                <button
+                  onClick={clearAllFilters}
+                  className="text-sm text-slate-400 hover:text-slate-300 transition font-medium"
+                >
+                  Reset
+                </button>
             </div>
 
-            <SectionCard>
-              <div className="space-y-6">
-                <div className="space-y-3">
-                  <label className="block text-sm font-medium text-white">Genre</label>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Search Title</label>
+                <input
+                  type="text"
+                  placeholder="Enter movie title..."
+                  value={titleSearch}
+                  onChange={(e) => setTitleSearch(e.target.value)}
+                  className="w-full rounded-lg border border-slate-700 bg-slate-950/60 px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 transition"
+                />
+                  </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-3">Genre</label>
                   <div className="flex flex-wrap gap-2">
-                    {genreOptions.map((option) => (
+                  <Pill label="Any" active={!genre} onClick={() => setGenre("")} />
+                  {primaryGenres.map((option) => (
                       <Pill
                         key={option}
                         label={option}
@@ -409,256 +236,269 @@ export default function DashboardPage() {
                         onClick={() => setGenre(option)}
                       />
                     ))}
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <label className="block text-sm font-medium text-white">Vibe</label>
-                  <div className="flex flex-wrap gap-2">
-                    {vibeOptions.map((option) => (
-                      <Pill
-                        key={option}
-                        label={option}
-                        active={vibe === option}
-                        accent="bg-indigo-400"
-                        onClick={() => setVibe(option)}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-white">Max rating</label>
-                    <select
-                      value={maxRating}
-                      onChange={(e) => setMaxRating(e.target.value)}
-                      className="w-full rounded-lg border border-slate-700 bg-slate-800/50 px-4 py-2.5 text-sm text-white outline-none transition focus:border-cyan-400/60 focus:bg-slate-800 focus:ring-1 focus:ring-cyan-400/30"
-                    >
-                      {Object.keys(ratingOrder).map((rating) => (
-                        <option
-                          key={rating}
-                          value={rating}
-                          className="bg-slate-900 text-white"
-                        >
-                          Up to {rating}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="block text-sm font-medium text-white">Runtime</label>
-                      <span className="text-sm font-medium text-cyan-400">{runtime} min</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="85"
-                      max="150"
-                      value={runtime}
-                      onChange={(e) => setRuntime(Number(e.target.value))}
-                      className="h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-800 accent-cyan-400"
-                    />
-                    <div className="flex justify-between text-xs text-slate-500">
-                      <span>85 min</span>
-                      <span>150 min</span>
-                    </div>
-                  </div>
                 </div>
               </div>
-            </SectionCard>
-          </div>
 
-          {/* Middle Column: Recommendation */}
-          <div>
-            <SectionCard>
-              <div className="space-y-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="mb-3 flex items-center gap-2">
-                      <span className="rounded-full bg-indigo-500/20 px-2.5 py-1 text-xs font-medium text-indigo-300 border border-indigo-500/30">
-                        {recommendation.vibe}
-                      </span>
-                      <span className="text-xs text-slate-500">•</span>
-                      <span className="text-xs font-medium text-emerald-400">{matchConfidence}% match</span>
-                    </div>
-                    <h3 className="text-2xl font-semibold text-white mb-2">{recommendation.title}</h3>
-                    <p className="text-sm text-slate-300 leading-relaxed">{recommendation.synopsis}</p>
-                  </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Max Rating</label>
+                  <select
+                    value={maxRating}
+                    onChange={(e) => setMaxRating(e.target.value)}
+                    className="w-full rounded-lg border border-slate-700 bg-slate-950/60 px-4 py-2.5 text-sm text-white focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 transition"
+                  >
+                    <option value="G">Up to G</option>
+                    <option value="PG">Up to PG</option>
+                    <option value="PG-13">Up to PG-13</option>
+                    <option value="R">Up to R</option>
+                    <option value="NC-17">Up to NC-17</option>
+                  </select>
                 </div>
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-slate-300">Max Runtime</label>
+                    <span className="text-sm font-medium text-cyan-400">{runtime} min</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="60"
+                    max="200"
+                    step="5"
+                    value={runtime}
+                    onChange={(e) => setRuntime(Number(e.target.value))}
+                    className="h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-800 accent-cyan-400"
+                  />
+                </div>
+              </div>
 
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-3">Year</label>
                 <div className="flex flex-wrap gap-2">
-                  {recommendation.genres.map((g) => (
-                    <span
-                      key={g}
-                      className="rounded-lg bg-cyan-500/15 px-3 py-1.5 text-xs font-medium text-cyan-200 border border-cyan-500/20"
-                    >
-                      {g}
-                    </span>
-                  ))}
-                  <span className="rounded-lg border border-slate-700 bg-slate-800/50 px-3 py-1.5 text-xs text-slate-300">
-                    {recommendation.rating}
-                  </span>
-                  <span className="rounded-lg border border-slate-700 bg-slate-800/50 px-3 py-1.5 text-xs text-slate-300">
-                    {recommendation.runtime} min
-                  </span>
-                </div>
-
-                <div className="rounded-xl border border-slate-800 bg-slate-800/30 p-4 space-y-3">
-                  <div>
-                    <p className="text-xs text-slate-400 mb-1.5 font-medium">Cast</p>
-                    <p className="text-sm font-medium text-white">
-                      {recommendation.cast.join(" • ")}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-400 mb-1.5 font-medium">Director</p>
-                    <p className="text-sm font-medium text-white">
-                      {recommendation.director}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <button className="flex-1 rounded-lg bg-gradient-to-r from-cyan-400 to-indigo-500 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:shadow-lg hover:shadow-cyan-500/40 hover:scale-[1.02] active:scale-[0.98]">
-                    Add to Queue
-                  </button>
-                  <button className="rounded-lg border border-slate-700 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-slate-600 hover:bg-slate-800/50 hover:text-white">
-                    Find Another
-                  </button>
+                  {["2020s", "2010s", "2000s", "1990s"].map((decade) => {
+                    const [start, end] =
+                      decade === "2020s"
+                        ? [2020, 2024]
+                        : decade === "2010s"
+                        ? [2010, 2019]
+                        : decade === "2000s"
+                        ? [2000, 2009]
+                        : [1990, 1999];
+                    const active = yearRange[0] === start && yearRange[1] === end;
+                    return (
+                      <button
+                        key={decade}
+                        onClick={() => setYearRange([start, end])}
+                        className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+                          active 
+                            ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30" 
+                            : "bg-slate-800/50 text-slate-400 hover:bg-slate-700/50 border border-slate-700/50"
+                        }`}
+                      >
+                        {decade}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-            </SectionCard>
-          </div>
+            </section>
 
-          {/* Right Column: Filters */}
-          <div>
-            <SectionCard className={`border-emerald-500/30 bg-gradient-to-br from-slate-900/60 to-slate-900/40 transition-all ${showFilters ? "shadow-xl shadow-emerald-500/10" : ""}`}>
+            <section className="rounded-xl bg-slate-900/60 border border-slate-800/50 overflow-hidden">
               <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex w-full items-center justify-between text-left group mb-4"
+                className="flex w-full items-center justify-between px-6 py-4 text-base font-medium text-white hover:bg-slate-800/50 transition"
+                onClick={() => setShowAdvanced((prev) => !prev)}
               >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/20 border border-emerald-500/30 group-hover:bg-emerald-500/30 transition">
-                    <svg className="h-4 w-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="text-base font-semibold text-white">Refine Search</h3>
-                    <p className="text-xs text-slate-400">Fine-tune results</p>
-                  </div>
-                </div>
-                <div className={`transition-transform duration-200 ${showFilters ? "rotate-180" : ""}`}>
-                  <svg className="h-4 w-4 text-slate-400 group-hover:text-emerald-400 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
+                <span>Advanced Filters</span>
+                <span className="text-sm text-slate-400">{showAdvanced ? "−" : "+"}</span>
               </button>
-
-              {showFilters && (
-                <div className="space-y-5 pt-4 border-t border-slate-800">
-                  <div className="space-y-2.5">
-                    <label className="block text-xs font-medium text-white">Actors</label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {actors.map((actor) => (
-                        <Pill
-                          key={actor.actor_id}
-                          label={actor.name}
-                          active={selectedActors.includes(actor.name)}
-                          onClick={() => toggleActor(actor.name)}
-                          variant="chip"
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2.5">
-                    <label className="block text-xs font-medium text-white">Directors</label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {directors.map((director) => (
-                        <Pill
-                          key={director.director_id}
-                          label={director.director_name}
-                          active={selectedDirectors.includes(director.director_name)}
-                          onClick={() => toggleDirector(director.director_name)}
-                          variant="chip"
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2.5">
-                    <label className="block text-xs font-medium text-white">Year Range</label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[10px] text-slate-400 mb-1">From</label>
-                        <input
-                          type="number"
-                          min="1900"
-                          max="2024"
-                          value={yearRange[0]}
-                          onChange={(e) => setYearRange([Number(e.target.value), yearRange[1]])}
-                          className="w-full rounded-lg border border-slate-700 bg-slate-800/50 px-2.5 py-2 text-xs text-white outline-none transition focus:border-emerald-400/60 focus:bg-slate-800"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] text-slate-400 mb-1">To</label>
-                        <input
-                          type="number"
-                          min="1900"
-                          max="2024"
-                          value={yearRange[1]}
-                          onChange={(e) => setYearRange([yearRange[0], Number(e.target.value)])}
-                          className="w-full rounded-lg border border-slate-700 bg-slate-800/50 px-2.5 py-2 text-xs text-white outline-none transition focus:border-emerald-400/60 focus:bg-slate-800"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <label className="block text-xs font-medium text-white">Min Rating</label>
-                      <span className="text-xs text-slate-400">{minRating > 0 ? `${minRating}/5` : "Any"}</span>
+              {showAdvanced && (
+                <div className="space-y-5 border-t border-slate-800/60 px-6 py-5">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-slate-300">Min Rating</label>
+                      <span className="text-sm text-slate-400">{minRating > 0 ? minRating.toFixed(1) : "Any"}</span>
                     </div>
                     <input
                       type="range"
                       min="0"
-                      max="5"
+                      max="10"
                       step="0.5"
                       value={minRating}
                       onChange={(e) => setMinRating(Number(e.target.value))}
-                      className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-slate-800 accent-emerald-400"
+                      className="h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-800 accent-cyan-400"
                     />
-                    <div className="flex justify-between text-[10px] text-slate-500">
-                      <span>Any</span>
-                      <span>5.0</span>
-                    </div>
-                  </div>
+                </div>
 
-                  <div className="flex gap-2 pt-1">
-                    <button
-                      onClick={() => {
-                        setSelectedActors([]);
-                        setSelectedDirectors([]);
-                        setYearRange([2010, 2024]);
-                        setMinRating(0);
-                      }}
-                      className="flex-1 rounded-lg border border-slate-700 px-3 py-2 text-xs font-medium text-slate-300 transition hover:border-slate-600 hover:bg-slate-800/50 hover:text-white"
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-slate-300">Min Votes</label>
+                      <span className="text-sm text-slate-400">{minVotes > 0 ? `${(minVotes / 1000).toFixed(0)}k` : "Any"}</span>
+              </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1000000"
+                      step="10000"
+                      value={minVotes}
+                      onChange={(e) => setMinVotes(Number(e.target.value))}
+                      className="h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-800 accent-cyan-400"
+                    />
+            </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Sort By</label>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className="w-full rounded-lg border border-slate-700 bg-slate-950/60 px-4 py-2.5 text-sm text-white focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 transition"
                     >
-                      Clear
-                    </button>
-                    <button
-                      onClick={() => setShowFilters(false)}
-                      className="flex-1 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 px-3 py-2 text-xs font-semibold text-white transition hover:shadow-lg hover:shadow-emerald-500/30 hover:scale-[1.02] active:scale-[0.98]"
-                    >
-                      Apply
-                    </button>
+                      <option value="rating">Rating (High to Low)</option>
+                      <option value="votes">Votes (Most Popular)</option>
+                      <option value="year">Year (Newest First)</option>
+                      <option value="year_old">Year (Oldest First)</option>
+                      <option value="runtime">Runtime (Shortest First)</option>
+                      <option value="runtime_long">Runtime (Longest First)</option>
+                    </select>
+        </div>
+
+                <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="block text-sm font-medium text-slate-300">Actors</label>
+                      {selectedActors.length > 0 && (
+                        <button
+                          onClick={() => setSelectedActors([])}
+                          className="text-xs text-cyan-400 hover:text-cyan-300 transition"
+                        >
+                          Clear ({selectedActors.length})
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex max-h-48 flex-wrap gap-2 overflow-y-auto pr-1">
+                      {topActors.length === 0 ? (
+                        <span className="text-sm text-slate-500">Loading actors…</span>
+                      ) : (
+                        topActors.map((actor) => (
+                          <Pill
+                            key={actor}
+                            label={actor}
+                            active={selectedActors.includes(actor)}
+                            onClick={() => toggleActor(actor)}
+                            variant="chip"
+                          />
+                        ))
+                      )}
+                </div>
                   </div>
                 </div>
               )}
-            </SectionCard>
-          </div>
+            </section>
+          </aside>
+
+          {/* Right Side - Content */}
+          <div className="flex-1 space-y-6 min-w-0">
+            {/* Top Recommendation */}
+            {recommendation ? (
+              <article className="rounded-xl bg-slate-900/60 border border-slate-800/50 p-6 shadow-lg">
+                <div className="flex flex-wrap items-center gap-2 text-sm text-slate-400 mb-3">
+                  {recommendation.year && <span>{recommendation.year}</span>}
+                  {recommendation.rating_value > 0 && (
+                    <>
+                      <span>•</span>
+                      <span className="text-cyan-400">⭐ {recommendation.rating_value.toFixed(1)}</span>
+                    </>
+                  )}
+                  {recommendation.runtime > 0 && (
+                    <>
+                      <span>•</span>
+                      <span>{recommendation.runtime} min</span>
+                    </>
+                  )}
+              </div>
+                <h2 className="text-2xl font-bold text-white mb-3">{recommendation.title}</h2>
+                <p className="text-sm leading-relaxed text-slate-300 mb-4">{recommendation.synopsis}</p>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {recommendation.genres?.slice(0, 4).map((g) => (
+                    <span key={g} className="rounded-full bg-cyan-500/20 px-3 py-1.5 text-xs font-medium text-cyan-300 border border-cyan-500/30">
+                    {g}
+                  </span>
+                ))}
+                  {recommendation.rating && recommendation.rating !== "Unrated" && (
+                    <span className="rounded-full bg-slate-800/70 px-3 py-1.5 text-xs font-medium text-slate-200 border border-slate-700/50">
+                  {recommendation.rating}
+                </span>
+                  )}
+                </div>
+                {recommendation.cast && recommendation.cast.length > 0 && (
+                  <p className="text-sm text-slate-400">
+                    <span className="text-slate-500">Cast: </span>
+                    {Array.isArray(recommendation.cast)
+                      ? recommendation.cast.filter(Boolean).slice(0, 5).join(", ")
+                      : ""}
+                  </p>
+                )}
+              </article>
+            ) : (
+              <article className="rounded-xl bg-slate-900/60 border border-slate-800/50 p-12 text-center">
+                <p className="text-slate-400">Adjust filters to see recommendations</p>
+              </article>
+            )}
+
+            {/* Movie List */}
+            <section className="rounded-xl bg-slate-900/60 border border-slate-800/50 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-semibold text-white">
+                  {movies.length} {movies.length === 1 ? "match" : "matches"}
+                </h3>
+                <span className="text-sm text-slate-400">Sort: {sortLabel}</span>
+              </div>
+
+              {loading ? (
+                <div className="flex items-center justify-center py-16">
+                  <div className="h-8 w-8 animate-spin rounded-full border-3 border-cyan-400 border-t-transparent" />
+              </div>
+              ) : error ? (
+                <div className="py-12 text-center">
+                  <p className="text-sm text-red-400">{error}</p>
+            </div>
+              ) : movies.length === 0 ? (
+                <div className="py-12 text-center">
+                  <p className="text-sm text-slate-400">No movies found. Try adjusting your filters.</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                  {movies.map((movie, index) => (
+                    <button
+                      key={movie.title + index}
+                      className="w-full rounded-lg bg-slate-900/50 border border-slate-800/50 px-4 py-3.5 text-left transition hover:bg-slate-800/70 hover:border-slate-700/50"
+                      onClick={() => {
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                        const next = [...movies];
+                        [next[0], next[index]] = [next[index], next[0]];
+                        setMovies(next);
+                      }}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-sm font-semibold text-white">{movie.title}</span>
+                        {movie.rating_value > 0 && (
+                          <>
+                            <span className="text-slate-600">•</span>
+                            <span className="text-sm text-cyan-400">⭐ {movie.rating_value.toFixed(1)}</span>
+                          </>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                        {movie.genres?.slice(0, 2).map((g) => (
+                          <span key={g} className="text-cyan-300">{g}</span>
+                        ))}
+                        {movie.year && <span>• {movie.year}</span>}
+                        {movie.runtime > 0 && <span>• {movie.runtime} min</span>}
+                        {movie.rating && movie.rating !== "Unrated" && <span>• {movie.rating}</span>}
+                      </div>
+                    </button>
+              ))}
+            </div>
+              )}
+            </section>
+            </div>
         </div>
       </main>
     </div>

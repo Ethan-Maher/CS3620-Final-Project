@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
+import { api } from "@/lib/api";
 
 function Pill({ label, active, onClick, variant = "default" }) {
   if (variant === "chip") {
@@ -33,8 +34,8 @@ function Pill({ label, active, onClick, variant = "default" }) {
 }
 
 export default function DashboardPage() {
+  const [activeTab, setActiveTab] = useState("movies"); // "movies" or "shows"
   const [genre, setGenre] = useState("");
-  const [runtime, setRuntime] = useState(115);
   const [maxRating, setMaxRating] = useState("R");
   const [selectedActors, setSelectedActors] = useState([]);
   const [yearRange, setYearRange] = useState([1900, 2024]);
@@ -51,41 +52,51 @@ export default function DashboardPage() {
   const [error, setError] = useState(null);
   const [genresLoaded, setGenresLoaded] = useState(false);
 
+  // Fetch genres based on active tab
   useEffect(() => {
-    const fetchInitialData = async () => {
+    const fetchGenres = async () => {
       try {
-        setLoading(true);
-        const [genresRes, actorsRes] = await Promise.all([
-          fetch("/api/genres"),
-          fetch("/api/actors")
-        ]);
-
-        const genresData = await genresRes.json();
-        const actorsData = await actorsRes.json();
-
-        if (genresData.success) {
-          setGenreOptions(genresData.genres || []);
+        setGenresLoaded(false);
+        const endpoint = activeTab === "movies" ? api.genres : api.showGenres;
+        const response = await fetch(endpoint);
+        const data = await response.json();
+        
+        if (data.success) {
+          setGenreOptions(data.genres || []);
           setGenresLoaded(true);
         } else {
           setGenresLoaded(true);
         }
-
-        if (actorsData.success) {
-          setActorOptions(actorsData.actors || []);
-        }
       } catch (err) {
-        console.error("Error fetching initial data:", err);
-        setError("Failed to load data: " + err.message);
-      } finally {
-        setLoading(false);
+        console.error("Error fetching genres:", err);
+        setGenresLoaded(true);
       }
     };
 
-    fetchInitialData();
+    fetchGenres();
+  }, [activeTab]);
+
+  // Fetch actors (same for both)
+  useEffect(() => {
+    const fetchActors = async () => {
+      try {
+        const response = await fetch(api.actors);
+        const data = await response.json();
+        
+        if (data.success) {
+          setActorOptions(data.actors || []);
+        }
+      } catch (err) {
+        console.error("Error fetching actors:", err);
+      }
+    };
+
+    fetchActors();
   }, []);
 
+  // Fetch movies or shows based on active tab
   useEffect(() => {
-    const fetchMovies = async () => {
+    const fetchData = async () => {
       if (!genresLoaded) return;
       
       setLoading(true);
@@ -95,7 +106,6 @@ export default function DashboardPage() {
         const params = new URLSearchParams();
         if (genre && genre !== "") params.append("genre", genre);
         if (maxRating) params.append("maxRating", maxRating);
-        params.append("maxRuntime", runtime);
         params.append("yearFrom", yearRange[0]);
         params.append("yearTo", yearRange[1]);
         if (minRating > 0) params.append("minRating", minRating);
@@ -105,27 +115,28 @@ export default function DashboardPage() {
         params.append("sortBy", sortBy);
         params.append("limit", "100");
 
-        const response = await fetch(`/api/movies?${params.toString()}`);
+        const endpoint = activeTab === "movies" ? api.movies : api.shows;
+        const response = await fetch(`${endpoint}?${params.toString()}`);
         const data = await response.json();
 
         if (data.success) {
           setMovies(data.movies || []);
           if (data.movies && data.movies.length === 0) {
-            setError("No movies found matching your criteria.");
+            setError(`No ${activeTab} found matching your criteria.`);
           }
         } else {
-          setError(data.error || "Failed to fetch movies");
+          setError(data.error || `Failed to fetch ${activeTab}`);
         }
       } catch (err) {
-        console.error("Error fetching movies:", err);
-        setError(`Failed to load movies: ${err.message}`);
+        console.error(`Error fetching ${activeTab}:`, err);
+        setError(`Failed to load ${activeTab}: ${err.message}`);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchMovies();
-  }, [genre, maxRating, runtime, yearRange, minRating, minVotes, selectedActors, sortBy, titleSearch, genresLoaded]);
+    fetchData();
+  }, [activeTab, genre, maxRating, yearRange, minRating, minVotes, selectedActors, sortBy, titleSearch, genresLoaded]);
 
   const recommendation = useMemo(() => {
     if (movies.length === 0) return null;
@@ -134,13 +145,11 @@ export default function DashboardPage() {
       if (b.score !== a.score) {
         return b.score - a.score;
       }
-      const aRuntimeDiff = Math.abs(a.runtime - runtime);
-      const bRuntimeDiff = Math.abs(b.runtime - runtime);
-      return aRuntimeDiff - bRuntimeDiff;
+      return b.rating_value - a.rating_value;
     });
 
     return sorted[0];
-  }, [movies, runtime]);
+  }, [movies]);
 
   const primaryGenres = useMemo(() => genreOptions.slice(0, 8), [genreOptions]);
   const topActors = useMemo(() => actorOptions.slice(0, 50), [actorOptions]);
@@ -172,7 +181,6 @@ export default function DashboardPage() {
     setMinVotes(0);
     setTitleSearch("");
     setSortBy("rating");
-    setRuntime(115);
     setMaxRating("R");
   };
 
@@ -182,11 +190,11 @@ export default function DashboardPage() {
         <div className="mx-auto max-w-7xl px-6 py-5">
           <div className="flex items-center gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 via-cyan-500 to-indigo-500 text-slate-950 font-bold text-xl shadow-lg shadow-cyan-500/30">
-            W
-          </div>
+              W
+            </div>
             <div className="flex-1">
               <h1 className="text-xl font-bold text-white tracking-tight">WhatToWatch</h1>
-              <p className="text-xs text-slate-400 mt-0.5">Discover your next favorite film</p>
+              <p className="text-xs text-slate-400 mt-0.5">Discover your next favorite {activeTab === "movies" ? "film" : "show"}</p>
             </div>
             {movies.length > 0 && (
               <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-900/60 border border-slate-800/50">
@@ -199,6 +207,36 @@ export default function DashboardPage() {
       </header>
 
       <main className="mx-auto max-w-7xl px-6 py-8">
+        {/* Tab Navigation */}
+        <div className="mb-6 flex gap-2 border-b border-slate-800/50">
+          <button
+            onClick={() => {
+              setActiveTab("movies");
+              setGenre(""); // Reset genre when switching tabs
+            }}
+            className={`px-6 py-3 text-sm font-medium transition ${
+              activeTab === "movies"
+                ? "border-b-2 border-cyan-400 text-cyan-300"
+                : "text-slate-400 hover:text-slate-300"
+            }`}
+          >
+            Movies
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab("shows");
+              setGenre(""); // Reset genre when switching tabs
+            }}
+            className={`px-6 py-3 text-sm font-medium transition ${
+              activeTab === "shows"
+                ? "border-b-2 border-cyan-400 text-cyan-300"
+                : "text-slate-400 hover:text-slate-300"
+            }`}
+          >
+            TV Shows
+          </button>
+        </div>
+
         <div className="flex flex-col gap-6 lg:flex-row">
           {/* Left Sidebar - Filters */}
           <aside className="w-full flex-shrink-0 space-y-4 lg:w-80">
@@ -211,64 +249,55 @@ export default function DashboardPage() {
                 >
                   Reset
                 </button>
-            </div>
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">Search Title</label>
                 <input
                   type="text"
-                  placeholder="Enter movie title..."
+                  placeholder={`Enter ${activeTab === "movies" ? "movie" : "show"} title...`}
                   value={titleSearch}
                   onChange={(e) => setTitleSearch(e.target.value)}
                   className="w-full rounded-lg border border-slate-700 bg-slate-950/60 px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 transition"
                 />
-                  </div>
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-3">Genre</label>
-                  <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Pill label="Any" active={!genre} onClick={() => setGenre("")} />
                   {primaryGenres.map((option) => (
-                      <Pill
-                        key={option}
-                        label={option}
-                        active={genre === option}
-                        onClick={() => setGenre(option)}
-                      />
-                    ))}
+                    <Pill
+                      key={option}
+                      label={option}
+                      active={genre === option}
+                      onClick={() => setGenre(option)}
+                    />
+                  ))}
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Max Rating</label>
-                  <select
-                    value={maxRating}
-                    onChange={(e) => setMaxRating(e.target.value)}
-                    className="w-full rounded-lg border border-slate-700 bg-slate-950/60 px-4 py-2.5 text-sm text-white focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 transition"
-                  >
-                    <option value="G">Up to G</option>
-                    <option value="PG">Up to PG</option>
-                    <option value="PG-13">Up to PG-13</option>
-                    <option value="R">Up to R</option>
-                    <option value="NC-17">Up to NC-17</option>
-                  </select>
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-sm font-medium text-slate-300">Max Runtime</label>
-                    <span className="text-sm font-medium text-cyan-400">{runtime} min</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="60"
-                    max="200"
-                    step="5"
-                    value={runtime}
-                    onChange={(e) => setRuntime(Number(e.target.value))}
-                    className="h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-800 accent-cyan-400"
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Max Rating</label>
+                <select
+                  value={maxRating}
+                  onChange={(e) => setMaxRating(e.target.value)}
+                  className="w-full rounded-lg border border-slate-700 bg-slate-950/60 px-4 py-2.5 text-sm text-white focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 transition"
+                >
+                  <option value="G">Up to G</option>
+                  <option value="PG">Up to PG</option>
+                  <option value="PG-13">Up to PG-13</option>
+                  <option value="R">Up to R</option>
+                  <option value="NC-17">Up to NC-17</option>
+                  {activeTab === "shows" && (
+                    <>
+                      <option value="TV-G">Up to TV-G</option>
+                      <option value="TV-PG">Up to TV-PG</option>
+                      <option value="TV-14">Up to TV-14</option>
+                      <option value="TV-MA">Up to TV-MA</option>
+                    </>
+                  )}
+                </select>
               </div>
 
               <div>
@@ -326,23 +355,25 @@ export default function DashboardPage() {
                       onChange={(e) => setMinRating(Number(e.target.value))}
                       className="h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-800 accent-cyan-400"
                     />
-                </div>
+                  </div>
 
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="block text-sm font-medium text-slate-300">Min Votes</label>
-                      <span className="text-sm text-slate-400">{minVotes > 0 ? `${(minVotes / 1000).toFixed(0)}k` : "Any"}</span>
-              </div>
-                    <input
-                      type="range"
-                      min="0"
-                      max="1000000"
-                      step="10000"
-                      value={minVotes}
-                      onChange={(e) => setMinVotes(Number(e.target.value))}
-                      className="h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-800 accent-cyan-400"
-                    />
-            </div>
+                  {activeTab === "movies" && (
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-medium text-slate-300">Min Votes</label>
+                        <span className="text-sm text-slate-400">{minVotes > 0 ? `${(minVotes / 1000).toFixed(0)}k` : "Any"}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1000000"
+                        step="10000"
+                        value={minVotes}
+                        onChange={(e) => setMinVotes(Number(e.target.value))}
+                        className="h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-800 accent-cyan-400"
+                      />
+                    </div>
+                  )}
 
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">Sort By</label>
@@ -352,15 +383,15 @@ export default function DashboardPage() {
                       className="w-full rounded-lg border border-slate-700 bg-slate-950/60 px-4 py-2.5 text-sm text-white focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 transition"
                     >
                       <option value="rating">Rating (High to Low)</option>
-                      <option value="votes">Votes (Most Popular)</option>
+                      {activeTab === "movies" && <option value="votes">Votes (Most Popular)</option>}
                       <option value="year">Year (Newest First)</option>
                       <option value="year_old">Year (Oldest First)</option>
                       <option value="runtime">Runtime (Shortest First)</option>
                       <option value="runtime_long">Runtime (Longest First)</option>
                     </select>
-        </div>
+                  </div>
 
-                <div>
+                  <div>
                     <div className="flex items-center justify-between mb-3">
                       <label className="block text-sm font-medium text-slate-300">Actors</label>
                       {selectedActors.length > 0 && (
@@ -386,7 +417,7 @@ export default function DashboardPage() {
                           />
                         ))
                       )}
-                </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -412,19 +443,19 @@ export default function DashboardPage() {
                       <span>{recommendation.runtime} min</span>
                     </>
                   )}
-              </div>
+                </div>
                 <h2 className="text-2xl font-bold text-white mb-3">{recommendation.title}</h2>
                 <p className="text-sm leading-relaxed text-slate-300 mb-4">{recommendation.synopsis}</p>
                 <div className="flex flex-wrap gap-2 mb-4">
                   {recommendation.genres?.slice(0, 4).map((g) => (
                     <span key={g} className="rounded-full bg-cyan-500/20 px-3 py-1.5 text-xs font-medium text-cyan-300 border border-cyan-500/30">
-                    {g}
-                  </span>
-                ))}
+                      {g}
+                    </span>
+                  ))}
                   {recommendation.rating && recommendation.rating !== "Unrated" && (
                     <span className="rounded-full bg-slate-800/70 px-3 py-1.5 text-xs font-medium text-slate-200 border border-slate-700/50">
-                  {recommendation.rating}
-                </span>
+                      {recommendation.rating}
+                    </span>
                   )}
                 </div>
                 {recommendation.cast && recommendation.cast.length > 0 && (
@@ -442,7 +473,7 @@ export default function DashboardPage() {
               </article>
             )}
 
-            {/* Movie List */}
+            {/* Movie/Show List */}
             <section className="rounded-xl bg-slate-900/60 border border-slate-800/50 p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-base font-semibold text-white">
@@ -454,14 +485,14 @@ export default function DashboardPage() {
               {loading ? (
                 <div className="flex items-center justify-center py-16">
                   <div className="h-8 w-8 animate-spin rounded-full border-3 border-cyan-400 border-t-transparent" />
-              </div>
+                </div>
               ) : error ? (
                 <div className="py-12 text-center">
                   <p className="text-sm text-red-400">{error}</p>
-            </div>
+                </div>
               ) : movies.length === 0 ? (
                 <div className="py-12 text-center">
-                  <p className="text-sm text-slate-400">No movies found. Try adjusting your filters.</p>
+                  <p className="text-sm text-slate-400">No {activeTab} found. Try adjusting your filters.</p>
                 </div>
               ) : (
                 <div className="space-y-2 max-h-[600px] overflow-y-auto">
@@ -494,11 +525,11 @@ export default function DashboardPage() {
                         {movie.rating && movie.rating !== "Unrated" && <span>• {movie.rating}</span>}
                       </div>
                     </button>
-              ))}
-            </div>
+                  ))}
+                </div>
               )}
             </section>
-            </div>
+          </div>
         </div>
       </main>
     </div>

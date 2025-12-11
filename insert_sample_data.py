@@ -117,8 +117,8 @@ def create_sample_data():
         else:
             print(f"  Already exists: {film.film_name}")
     
-    print(f"\n✓ Created {AllFilms.objects.count()} films")
-    print(f"✓ Created {Actors.objects.count()} actor entries")
+    print(f"\nCreated {AllFilms.objects.count()} films")
+    print(f"Created {Actors.objects.count()} actor entries")
     print("\nSample data insertion complete!")
 
 if __name__ == '__main__':

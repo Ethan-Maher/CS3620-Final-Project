@@ -35,7 +35,7 @@ def import_directors(csv_file):
                 if created:
                     count += 1
                     print(f"  Created: {director_name}")
-    print(f"✓ Imported {count} directors")
+    print(f"Imported {count} directors")
     return count
 
 def import_genres(csv_file):
@@ -53,7 +53,7 @@ def import_genres(csv_file):
                 if created:
                     count += 1
                     print(f"  Created: {genre_name}")
-    print(f"✓ Imported {count} genres")
+    print(f"Imported {count} genres")
     return count
 
 def import_films(csv_file):
@@ -145,7 +145,7 @@ def import_films(csv_file):
             else:
                 print(f"  Already exists: {film_name}")
     
-    print(f"✓ Imported {count} films")
+    print(f"Imported {count} films")
     return count
 
 def main():

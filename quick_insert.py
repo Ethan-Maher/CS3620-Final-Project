@@ -73,9 +73,9 @@ def insert_movie_interactive():
     )
     
     if created:
-        print(f"\n✓ Created film: {film_name}")
+        print(f"\nCreated film: {film_name}")
     else:
-        print(f"\n⚠ Film already exists: {film_name}")
+        print(f"\nFilm already exists: {film_name}")
     
     # Add actors
     actors_str = input("Actors (comma-separated, or press Enter to skip): ").strip()
@@ -83,7 +83,7 @@ def insert_movie_interactive():
         actors_list = [a.strip() for a in actors_str.split(',') if a.strip()]
         for actor_name in actors_list:
             Actors.objects.get_or_create(actor_name=actor_name, film_id=film)
-        print(f"✓ Added {len(actors_list)} actors")
+        print(f"Added {len(actors_list)} actors")
 
 def main():
     print("=" * 60)

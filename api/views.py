@@ -3,10 +3,15 @@ from django.views.decorators.http import require_http_methods
 from django.conf import settings
 from django.db.models import Q, Avg, Count
 from django.db import connection
+from django.contrib.auth import authenticate, login
+from django.views.decorators.csrf import csrf_exempt
 from .models import (
     AllFilms, MovieGenre, MovieDirector, MovieLanguage,
     Actors, MovieAverageRating, ShowAverageRating,
-    AllShows, ShowGenre, ShowCertificate, ActedIn
+    AllShows, ShowGenre, ShowCertificate, ActedIn,
+    User, AuditLog, WatchLaterMovie, WatchLaterShow,
+    WatchedMovie, WatchedShow, Favorites,
+    MovieRating, ShowUserRating
 )
 import json
 import re
@@ -104,6 +109,268 @@ def show_genres(request):
         }, status=500)
 
 
+@csrf_exempt
+def signup(request):
+    """User registration endpoint"""
+    # Handle preflight OPTIONS request
+    if request.method == 'OPTIONS':
+        response = JsonResponse({})
+        response['Access-Control-Allow-Origin'] = '*'
+        response['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        response['Access-Control-Allow-Headers'] = 'Content-Type'
+        return response
+    
+    try:
+        # Handle request body - decode if bytes
+        try:
+            body = request.body.decode('utf-8') if isinstance(request.body, bytes) else request.body
+        except (AttributeError, UnicodeDecodeError):
+            body = str(request.body)
+        data = json.loads(body)
+        email = data.get('email', '').strip().lower()
+        password = data.get('password', '')
+        
+        if not email or not password:
+            response = JsonResponse({
+                'success': False,
+                'error': 'Email and password are required'
+            }, status=400)
+            response['Access-Control-Allow-Origin'] = '*'
+            return response
+        
+        # Check if user already exists
+        if User.objects.filter(email=email).exists():
+            response = JsonResponse({
+                'success': False,
+                'error': 'User with this email already exists'
+            }, status=400)
+            response['Access-Control-Allow-Origin'] = '*'
+            return response
+        
+        # Create user
+        try:
+            user = User.objects.create_user(email=email, password=password)
+            # Log to audit log
+            AuditLog.objects.create(
+                changes_to_data=f"Authorization event - User signup: New user created with email {email} (User ID: {user.user_id})"
+            )
+        except Exception as create_error:
+            response = JsonResponse({
+                'success': False,
+                'error': f'Failed to create user: {str(create_error)}'
+            }, status=500)
+            response['Access-Control-Allow-Origin'] = '*'
+            return response
+        
+        response = JsonResponse({
+            'success': True,
+            'message': 'User created successfully',
+            'user_id': user.user_id
+        })
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+    except json.JSONDecodeError:
+        response = JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON data'
+        }, status=400)
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+    except Exception as error:
+        import traceback
+        error_msg = str(error)
+        error_stack = traceback.format_exc() if settings.DEBUG else None
+        response = JsonResponse({
+            'success': False,
+            'error': f'Server error: {error_msg}',
+            'stack': error_stack
+        }, status=500)
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+
+
+@csrf_exempt
+def signin(request):
+    """User login endpoint"""
+    # Handle preflight OPTIONS request
+    if request.method == 'OPTIONS':
+        response = JsonResponse({})
+        response['Access-Control-Allow-Origin'] = '*'
+        response['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        response['Access-Control-Allow-Headers'] = 'Content-Type'
+        return response
+    
+    if request.method != 'POST':
+        response = JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+    
+    try:
+        # Handle request body - decode if bytes
+        try:
+            body = request.body.decode('utf-8') if isinstance(request.body, bytes) else request.body
+        except (AttributeError, UnicodeDecodeError):
+            body = str(request.body)
+        data = json.loads(body)
+        email = data.get('email', '').strip().lower()
+        password = data.get('password', '')
+        
+        if not email or not password:
+            response = JsonResponse({
+                'success': False,
+                'error': 'Email and password are required'
+            }, status=400)
+            response['Access-Control-Allow-Origin'] = '*'
+            return response
+        
+        # Authenticate user
+        try:
+            user = authenticate(request, username=email, password=password)
+        except Exception as auth_error:
+            response = JsonResponse({
+                'success': False,
+                'error': f'Authentication error: {str(auth_error)}'
+            }, status=500)
+            response['Access-Control-Allow-Origin'] = '*'
+            return response
+        
+        if user is not None:
+            try:
+                login(request, user)
+                # Log to audit log
+                AuditLog.objects.create(
+                    changes_to_data=f"Authorization event - User signin: User {user.email} (User ID: {user.user_id}) signed in successfully"
+                )
+            except Exception as login_error:
+                response = JsonResponse({
+                    'success': False,
+                    'error': f'Login error: {str(login_error)}'
+                }, status=500)
+                response['Access-Control-Allow-Origin'] = '*'
+                return response
+            
+            response = JsonResponse({
+                'success': True,
+                'message': 'Login successful',
+                'user_id': user.user_id,
+                'email': user.email
+            })
+            response['Access-Control-Allow-Origin'] = '*'
+            return response
+        else:
+            response = JsonResponse({
+                'success': False,
+                'error': 'Invalid email or password'
+            }, status=401)
+            response['Access-Control-Allow-Origin'] = '*'
+            return response
+    except json.JSONDecodeError:
+        response = JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON data'
+        }, status=400)
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+    except Exception as error:
+        import traceback
+        error_msg = str(error)
+        error_stack = traceback.format_exc() if settings.DEBUG else None
+        response = JsonResponse({
+            'success': False,
+            'error': f'Server error: {error_msg}',
+            'stack': error_stack
+        }, status=500)
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+
+
+@require_http_methods(["GET"])
+def check_auth(request):
+    """Check if user is authenticated"""
+    try:
+        if request.user.is_authenticated:
+            return JsonResponse({
+                'success': True,
+                'authenticated': True,
+                'user_id': request.user.user_id,
+                'email': request.user.email
+            })
+        else:
+            return JsonResponse({
+                'success': True,
+                'authenticated': False
+            })
+    except Exception as error:
+        return JsonResponse({
+            'success': False,
+            'error': str(error)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def signout(request):
+    """User logout endpoint"""
+    try:
+        if request.user.is_authenticated:
+            # Log to audit log
+            AuditLog.objects.create(
+                changes_to_data=f"Authorization event - User signout: User {request.user.email} (User ID: {request.user.user_id}) signed out"
+            )
+            from django.contrib.auth import logout
+            logout(request)
+        
+        response = JsonResponse({
+            'success': True,
+            'message': 'Logged out successfully'
+        })
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+    except Exception as error:
+        response = JsonResponse({
+            'success': False,
+            'error': str(error)
+        }, status=500)
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+
+
+@require_http_methods(["GET"])
+def audit_logs(request):
+    """Get audit logs"""
+    try:
+        # Get limit parameter (default 100, max 1000)
+        limit_param = request.GET.get("limit", "100")
+        try:
+            limit = max(1, min(1000, int(limit_param)))
+        except:
+            limit = 100
+        
+        # Get logs ordered by date (newest first)
+        logs = AuditLog.objects.all().order_by('-date')[:limit]
+        
+        logs_data = []
+        for log in logs:
+            logs_data.append({
+                'table_id': log.table_id,
+                'date': log.date.isoformat(),
+                'changes_to_data': log.changes_to_data
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'logs': logs_data,
+            'count': len(logs_data)
+        })
+    except Exception as error:
+        import traceback
+        return JsonResponse({
+            'success': False,
+            'error': str(error),
+            'stack': traceback.format_exc() if settings.DEBUG else None
+        }, status=500)
+
+
 @require_http_methods(["GET"])
 def actors(request):
     """Get all unique actors from the database"""
@@ -160,13 +427,7 @@ def movies(request):
         min_votes = request.GET.get("minVotes", "")  # Note: We don't have votes in new schema
         title_search = request.GET.get("titleSearch", "")
         sort_by = request.GET.get("sortBy", "rating")
-        actors_param = request.GET.get("actors", "")
         limit_param = request.GET.get("limit", "100")
-        
-        # Parse actors
-        actors_list = []
-        if actors_param:
-            actors_list = [a.strip() for a in actors_param.split(",") if a.strip()]
         
         # Parse limit
         try:
@@ -194,14 +455,6 @@ def movies(request):
             queryset = queryset.filter(
                 Q(year__lte=safe_int(year_to)) | Q(year__isnull=True)
             )
-        
-        # Actor filter - check if any actor in the film matches
-        if actors_list:
-            actor_filter = Q()
-            for actor in actors_list:
-                # Check in Actors table (films) - using reverse relationship
-                actor_filter |= Q(actors__actor_name__icontains=actor)
-            queryset = queryset.filter(actor_filter).distinct()
         
         # Get average ratings for sorting
         # We'll annotate with average rating if available
@@ -259,6 +512,7 @@ def movies(request):
             synopsis = "No description available."
             
             movie = {
+                'film_id': film.film_id,
                 'title': film.film_name or "Unknown",
                 'genres': genres,
                 'runtime': film.duration or 0,
@@ -300,13 +554,7 @@ def shows(request):
         min_rating = request.GET.get("minRating", "")
         title_search = request.GET.get("titleSearch", "")
         sort_by = request.GET.get("sortBy", "rating")
-        actors_param = request.GET.get("actors", "")
         limit_param = request.GET.get("limit", "100")
-        
-        # Parse actors
-        actors_list = []
-        if actors_param:
-            actors_list = [a.strip() for a in actors_param.split(",") if a.strip()]
         
         # Parse limit
         try:
@@ -348,13 +596,6 @@ def shows(request):
             year_to_val = safe_int(year_to)
             # Show must start before or in year_to, or we can't determine (include it)
             pass  # Will filter after querying
-        
-        # Actor filter
-        if actors_list:
-            actor_filter = Q()
-            for actor in actors_list:
-                actor_filter |= Q(actedin__actor_name__icontains=actor)
-            queryset = queryset.filter(actor_filter).distinct()
         
         # Get average ratings for sorting
         queryset = queryset.annotate(
@@ -437,6 +678,7 @@ def shows(request):
                     year = int(year_match.group(1))
             
             show_data = {
+                'show_id': show.show_id,
                 'title': show.show_name or "Unknown",
                 'genres': genres,
                 'runtime': show.duration or 0,
@@ -464,3 +706,566 @@ def shows(request):
             'error': str(error),
             'stack': traceback.format_exc() if settings.DEBUG else None
         }, status=500)
+# ==================== WATCH LATER ENDPOINTS ====================
+
+@csrf_exempt
+@require_http_methods(["POST", "DELETE", "GET"])
+def watch_later_movie(request, film_id=None):
+    """Add/remove/get watch later movie"""
+    if not request.user.is_authenticated:
+        response = JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+    
+    try:
+        if request.method == 'POST':
+            # Add to watch later
+            film = AllFilms.objects.get(film_id=film_id)
+            watch_later, created = WatchLaterMovie.objects.get_or_create(
+                user_id=request.user,
+                film_id=film
+            )
+            if created:
+                AuditLog.objects.create(
+                    changes_to_data=f"User {request.user.email} added movie '{film.film_name}' to watch later"
+                )
+            response = JsonResponse({
+                'success': True,
+                'message': 'Added to watch later',
+                'added': created
+            })
+        elif request.method == 'DELETE':
+            # Remove from watch later
+            film = AllFilms.objects.get(film_id=film_id)
+            deleted = WatchLaterMovie.objects.filter(
+                user_id=request.user,
+                film_id=film
+            ).delete()[0]
+            if deleted:
+                AuditLog.objects.create(
+                    changes_to_data=f"User {request.user.email} removed movie '{film.film_name}' from watch later"
+                )
+            response = JsonResponse({
+                'success': True,
+                'message': 'Removed from watch later',
+                'deleted': deleted > 0
+            })
+        else:  # GET
+            # Get all watch later movies for user
+            watch_later_list = WatchLaterMovie.objects.filter(user_id=request.user).select_related('film_id')
+            movies_data = []
+            for item in watch_later_list:
+                film = item.film_id
+                movies_data.append({
+                    'film_id': film.film_id,
+                    'title': film.film_name,
+                    'year': film.year,
+                    'runtime': film.duration or 0,
+                    'genre': film.genre_id.genre_name if film.genre_id else None,
+                    'director': film.director_id.director_name if film.director_id else None,
+                })
+            response = JsonResponse({
+                'success': True,
+                'movies': movies_data,
+                'count': len(movies_data)
+            })
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+    except AllFilms.DoesNotExist:
+        response = JsonResponse({'success': False, 'error': 'Movie not found'}, status=404)
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+    except Exception as error:
+        response = JsonResponse({'success': False, 'error': str(error)}, status=500)
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+
+
+@csrf_exempt
+@require_http_methods(["POST", "DELETE", "GET"])
+def watch_later_show(request, show_id=None):
+    """Add/remove/get watch later show"""
+    if not request.user.is_authenticated:
+        response = JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+    
+    try:
+        if request.method == 'POST':
+            show = AllShows.objects.get(show_id=show_id)
+            watch_later, created = WatchLaterShow.objects.get_or_create(
+                user_id=request.user,
+                show_id=show
+            )
+            if created:
+                AuditLog.objects.create(
+                    changes_to_data=f"User {request.user.email} added show '{show.show_name}' to watch later"
+                )
+            response = JsonResponse({
+                'success': True,
+                'message': 'Added to watch later',
+                'added': created
+            })
+        elif request.method == 'DELETE':
+            show = AllShows.objects.get(show_id=show_id)
+            deleted = WatchLaterShow.objects.filter(
+                user_id=request.user,
+                show_id=show
+            ).delete()[0]
+            if deleted:
+                AuditLog.objects.create(
+                    changes_to_data=f"User {request.user.email} removed show '{show.show_name}' from watch later"
+                )
+            response = JsonResponse({
+                'success': True,
+                'message': 'Removed from watch later',
+                'deleted': deleted > 0
+            })
+        else:  # GET
+            watch_later_list = WatchLaterShow.objects.filter(user_id=request.user).select_related('show_id')
+            shows_data = []
+            for item in watch_later_list:
+                show = item.show_id
+                shows_data.append({
+                    'show_id': show.show_id,
+                    'title': show.show_name,
+                    'years': show.years,
+                    'runtime': show.duration or 0,
+                    'genre': show.genre_id.genre_name if show.genre_id else None,
+                    'rating': show.cert_id.cert_rating if show.cert_id else None,
+                })
+            response = JsonResponse({
+                'success': True,
+                'shows': shows_data,
+                'count': len(shows_data)
+            })
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+    except AllShows.DoesNotExist:
+        response = JsonResponse({'success': False, 'error': 'Show not found'}, status=404)
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+    except Exception as error:
+        response = JsonResponse({'success': False, 'error': str(error)}, status=500)
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+
+
+# ==================== FAVORITES ENDPOINTS ====================
+
+@csrf_exempt
+@require_http_methods(["GET", "POST", "PUT"])
+def favorites(request):
+    """Get or update user favorites"""
+    if not request.user.is_authenticated:
+        response = JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+    
+    try:
+        if request.method == 'GET':
+            fav, created = Favorites.objects.get_or_create(user_id=request.user)
+            response = JsonResponse({
+                'success': True,
+                'favorites': {
+                    'fav_director': fav.fav_director.director_id if fav.fav_director else None,
+                    'fav_director_name': fav.fav_director.director_name if fav.fav_director else None,
+                    'fav_actor': fav.fav_actor,
+                    'fav_genre': fav.fav_genre.genre_id if fav.fav_genre else None,
+                    'fav_genre_name': fav.fav_genre.genre_name if fav.fav_genre else None,
+                    'fav_decade': fav.fav_decade,
+                }
+            })
+        else:  # POST or PUT
+            body = request.body.decode('utf-8') if isinstance(request.body, bytes) else request.body
+            data = json.loads(body)
+            fav, created = Favorites.objects.get_or_create(user_id=request.user)
+            
+            if 'fav_director' in data and data['fav_director']:
+                try:
+                    fav.fav_director = MovieDirector.objects.get(director_id=data['fav_director'])
+                except MovieDirector.DoesNotExist:
+                    pass
+            if 'fav_actor' in data:
+                fav.fav_actor = data['fav_actor']
+            if 'fav_genre' in data and data['fav_genre']:
+                try:
+                    fav.fav_genre = MovieGenre.objects.get(genre_id=data['fav_genre'])
+                except MovieGenre.DoesNotExist:
+                    pass
+            if 'fav_decade' in data:
+                fav.fav_decade = data['fav_decade']
+            
+            fav.save()
+            AuditLog.objects.create(
+                changes_to_data=f"User {request.user.email} updated favorites"
+            )
+            response = JsonResponse({
+                'success': True,
+                'message': 'Favorites updated',
+                'favorites': {
+                    'fav_director': fav.fav_director.director_id if fav.fav_director else None,
+                    'fav_director_name': fav.fav_director.director_name if fav.fav_director else None,
+                    'fav_actor': fav.fav_actor,
+                    'fav_genre': fav.fav_genre.genre_id if fav.fav_genre else None,
+                    'fav_genre_name': fav.fav_genre.genre_name if fav.fav_genre else None,
+                    'fav_decade': fav.fav_decade,
+                }
+            })
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+    except Exception as error:
+        response = JsonResponse({'success': False, 'error': str(error)}, status=500)
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def user_top_rated(request):
+    """Get user's top-rated movies and shows"""
+    if not request.user.is_authenticated:
+        response = JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+    
+    try:
+        # Get top-rated movies (rating >= 8)
+        top_movie_reviews = MovieRating.objects.filter(
+            user_id=request.user,
+            user_rating__gte=8
+        ).select_related('film_id').order_by('-user_rating')[:10]
+        
+        top_movies = []
+        for review in top_movie_reviews:
+            film = review.film_id
+            top_movies.append({
+                'film_id': film.film_id,
+                'title': film.film_name,
+                'year': film.year,
+                'rating': review.user_rating,
+                'review': review.user_review,
+                'genre': film.genre_id.genre_name if film.genre_id else None,
+            })
+        
+        # Get top-rated shows (rating >= 8)
+        top_show_reviews = ShowUserRating.objects.filter(
+            user_id=request.user,
+            user_rating__gte=8
+        ).select_related('show_id').order_by('-user_rating')[:10]
+        
+        top_shows = []
+        for review in top_show_reviews:
+            show = review.show_id
+            top_shows.append({
+                'show_id': show.show_id,
+                'title': show.show_name,
+                'years': show.years,
+                'rating': review.user_rating,
+                'review': review.user_review,
+                'genre': show.genre_id.genre_name if show.genre_id else None,
+            })
+        
+        response = JsonResponse({
+            'success': True,
+            'top_movies': top_movies,
+            'top_shows': top_shows,
+            'total_movies': len(top_movies),
+            'total_shows': len(top_shows)
+        })
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+    except Exception as error:
+        response = JsonResponse({'success': False, 'error': str(error)}, status=500)
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def personalized_recommendations(request):
+    """Get personalized recommendations based on user favorites"""
+    if not request.user.is_authenticated:
+        response = JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+    
+    try:
+        # Get user favorites
+        fav, _ = Favorites.objects.get_or_create(user_id=request.user)
+        
+        # Build query based on favorites
+        movies_query = AllFilms.objects.all()
+        
+        if fav.fav_genre:
+            movies_query = movies_query.filter(genre_id=fav.fav_genre)
+        
+        if fav.fav_director:
+            movies_query = movies_query.filter(director_id=fav.fav_director)
+        
+        if fav.fav_decade:
+            # Parse decade (e.g., "1990s" -> 1990-1999)
+            decade_start = int(fav.fav_decade.replace('s', ''))
+            movies_query = movies_query.filter(year__gte=decade_start, year__lt=decade_start + 10)
+        
+        # Get recommended movies (limit 20, order by rating)
+        recommended = movies_query.select_related('genre_id', 'director_id')[:20]
+        
+        recommendations_data = []
+        for film in recommended:
+            # Get average rating
+            try:
+                avg_rating = MovieAverageRating.objects.get(film_id=film)
+                rating = float(avg_rating.average_score)
+            except:
+                rating = 0.0
+            
+            recommendations_data.append({
+                'film_id': film.film_id,
+                'title': film.film_name,
+                'year': film.year,
+                'runtime': film.duration or 0,
+                'genre': film.genre_id.genre_name if film.genre_id else None,
+                'director': film.director_id.director_name if film.director_id else None,
+                'rating': rating,
+            })
+        
+        # Sort by rating
+        recommendations_data.sort(key=lambda x: x['rating'], reverse=True)
+        
+        response = JsonResponse({
+            'success': True,
+            'recommendations': recommendations_data[:10],
+            'count': len(recommendations_data)
+        })
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+    except Exception as error:
+        response = JsonResponse({'success': False, 'error': str(error)}, status=500)
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+
+
+# ==================== REVIEWS ENDPOINTS ====================
+
+@csrf_exempt
+@require_http_methods(["GET", "POST", "PUT", "DELETE"])
+def movie_reviews(request, film_id=None):
+    """Get, post, update, or delete movie reviews"""
+    if not request.user.is_authenticated and request.method != 'GET':
+        response = JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+    
+    try:
+        if request.method == 'GET':
+            # Get all reviews for a movie, or all reviews if no film_id
+            if film_id:
+                reviews = MovieRating.objects.filter(film_id=film_id).select_related('user_id', 'film_id')
+            else:
+                reviews = MovieRating.objects.all().select_related('user_id', 'film_id')[:100]
+            
+            reviews_data = []
+            for review in reviews:
+                reviews_data.append({
+                    'review_id': review.id,
+                    'film_id': review.film_id.film_id,
+                    'film_name': review.film_id.film_name,
+                    'user_id': review.user_id.user_id,
+                    'user_email': review.user_id.email,
+                    'rating': review.user_rating,
+                    'review': review.user_review,
+                    'date': review.id,  # Using id as proxy for date
+                })
+            response = JsonResponse({
+                'success': True,
+                'reviews': reviews_data,
+                'count': len(reviews_data)
+            })
+        elif request.method == 'POST':
+            # Create new review
+            body = request.body.decode('utf-8') if isinstance(request.body, bytes) else request.body
+            data = json.loads(body)
+            film = AllFilms.objects.get(film_id=film_id)
+            rating = data.get('rating', 5)
+            review_text = data.get('review', '')
+            
+            review, created = MovieRating.objects.update_or_create(
+                film_id=film,
+                user_id=request.user,
+                defaults={
+                    'user_rating': rating,
+                    'user_review': review_text
+                }
+            )
+            AuditLog.objects.create(
+                changes_to_data=f"User {request.user.email} posted review for movie '{film.film_name}' (Rating: {rating})"
+            )
+            response = JsonResponse({
+                'success': True,
+                'message': 'Review posted' if created else 'Review updated',
+                'review': {
+                    'review_id': review.id,
+                    'film_id': film.film_id,
+                    'film_name': film.film_name,
+                    'user_id': request.user.user_id,
+                    'rating': review.user_rating,
+                    'review': review.user_review,
+                }
+            })
+        elif request.method == 'PUT':
+            # Update review
+            body = request.body.decode('utf-8') if isinstance(request.body, bytes) else request.body
+            data = json.loads(body)
+            review = MovieRating.objects.get(film_id=film_id, user_id=request.user)
+            review.user_rating = data.get('rating', review.user_rating)
+            review.user_review = data.get('review', review.user_review)
+            review.save()
+            AuditLog.objects.create(
+                changes_to_data=f"User {request.user.email} updated review for movie '{review.film_id.film_name}'"
+            )
+            response = JsonResponse({
+                'success': True,
+                'message': 'Review updated',
+                'review': {
+                    'review_id': review.id,
+                    'film_id': review.film_id.film_id,
+                    'rating': review.user_rating,
+                    'review': review.user_review,
+                }
+            })
+        else:  # DELETE
+            review = MovieRating.objects.get(film_id=film_id, user_id=request.user)
+            film_name = review.film_id.film_name
+            review.delete()
+            AuditLog.objects.create(
+                changes_to_data=f"User {request.user.email} deleted review for movie '{film_name}'"
+            )
+            response = JsonResponse({
+                'success': True,
+                'message': 'Review deleted'
+            })
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+    except AllFilms.DoesNotExist:
+        response = JsonResponse({'success': False, 'error': 'Movie not found'}, status=404)
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+    except MovieRating.DoesNotExist:
+        response = JsonResponse({'success': False, 'error': 'Review not found'}, status=404)
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+    except Exception as error:
+        response = JsonResponse({'success': False, 'error': str(error)}, status=500)
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST", "PUT", "DELETE"])
+def show_reviews(request, show_id=None):
+    """Get, post, update, or delete show reviews"""
+    if not request.user.is_authenticated and request.method != 'GET':
+        response = JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+    
+    try:
+        if request.method == 'GET':
+            if show_id:
+                reviews = ShowUserRating.objects.filter(show_id=show_id).select_related('user_id', 'show_id')
+            else:
+                reviews = ShowUserRating.objects.all().select_related('user_id', 'show_id')[:100]
+            
+            reviews_data = []
+            for review in reviews:
+                reviews_data.append({
+                    'review_id': review.id,
+                    'show_id': review.show_id.show_id,
+                    'show_name': review.show_id.show_name,
+                    'user_id': review.user_id.user_id,
+                    'user_email': review.user_id.email,
+                    'rating': review.user_rating,
+                    'review': review.user_review,
+                })
+            response = JsonResponse({
+                'success': True,
+                'reviews': reviews_data,
+                'count': len(reviews_data)
+            })
+        elif request.method == 'POST':
+            body = request.body.decode('utf-8') if isinstance(request.body, bytes) else request.body
+            data = json.loads(body)
+            show = AllShows.objects.get(show_id=show_id)
+            rating = data.get('rating', 5)
+            review_text = data.get('review', '')
+            
+            review, created = ShowUserRating.objects.update_or_create(
+                show_id=show,
+                user_id=request.user,
+                defaults={
+                    'user_rating': rating,
+                    'user_review': review_text
+                }
+            )
+            AuditLog.objects.create(
+                changes_to_data=f"User {request.user.email} posted review for show '{show.show_name}' (Rating: {rating})"
+            )
+            response = JsonResponse({
+                'success': True,
+                'message': 'Review posted' if created else 'Review updated',
+                'review': {
+                    'review_id': review.id,
+                    'show_id': show.show_id,
+                    'show_name': show.show_name,
+                    'user_id': request.user.user_id,
+                    'rating': review.user_rating,
+                    'review': review.user_review,
+                }
+            })
+        elif request.method == 'PUT':
+            body = request.body.decode('utf-8') if isinstance(request.body, bytes) else request.body
+            data = json.loads(body)
+            review = ShowUserRating.objects.get(show_id=show_id, user_id=request.user)
+            review.user_rating = data.get('rating', review.user_rating)
+            review.user_review = data.get('review', review.user_review)
+            review.save()
+            AuditLog.objects.create(
+                changes_to_data=f"User {request.user.email} updated review for show '{review.show_id.show_name}'"
+            )
+            response = JsonResponse({
+                'success': True,
+                'message': 'Review updated',
+                'review': {
+                    'review_id': review.id,
+                    'show_id': review.show_id.show_id,
+                    'rating': review.user_rating,
+                    'review': review.user_review,
+                }
+            })
+        else:  # DELETE
+            review = ShowUserRating.objects.get(show_id=show_id, user_id=request.user)
+            show_name = review.show_id.show_name
+            review.delete()
+            AuditLog.objects.create(
+                changes_to_data=f"User {request.user.email} deleted review for show '{show_name}'"
+            )
+            response = JsonResponse({
+                'success': True,
+                'message': 'Review deleted'
+            })
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+    except AllShows.DoesNotExist:
+        response = JsonResponse({'success': False, 'error': 'Show not found'}, status=404)
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+    except ShowUserRating.DoesNotExist:
+        response = JsonResponse({'success': False, 'error': 'Review not found'}, status=404)
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+    except Exception as error:
+        response = JsonResponse({'success': False, 'error': str(error)}, status=500)
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+

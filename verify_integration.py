@@ -31,16 +31,16 @@ def test_database():
             # Integrity check
             cursor.execute('PRAGMA integrity_check')
             integrity = cursor.fetchone()
-            print(f"✓ Integrity check: {integrity[0]}")
+            print(f"Integrity check: {integrity[0]}")
             
             # Foreign key check
             cursor.execute('PRAGMA foreign_key_check')
             fk_errors = cursor.fetchall()
             if fk_errors:
-                print(f"⚠ Foreign key errors: {len(fk_errors)}")
+                print(f"Foreign key errors: {len(fk_errors)}")
                 return False
             else:
-                print("✓ No foreign key violations")
+                print("No foreign key violations")
             
             # Table count
             cursor.execute("""
@@ -48,11 +48,11 @@ def test_database():
                 WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'django_%'
             """)
             tables = cursor.fetchall()
-            print(f"✓ Found {len(tables)} custom tables")
+            print(f"Found {len(tables)} custom tables")
             
         return True
     except Exception as e:
-        print(f"❌ Database error: {e}")
+        print(f"Database error: {e}")
         return False
 
 def test_models():
@@ -65,15 +65,15 @@ def test_models():
         actor_count = Actors.objects.count()
         director_count = MovieDirector.objects.count()
         
-        print(f"✓ AllFilms: {film_count} records")
-        print(f"✓ MovieGenre: {genre_count} records")
-        print(f"✓ Actors: {actor_count} records")
-        print(f"✓ MovieDirector: {director_count} records")
+        print(f"AllFilms: {film_count} records")
+        print(f"MovieGenre: {genre_count} records")
+        print(f"Actors: {actor_count} records")
+        print(f"MovieDirector: {director_count} records")
         
         # Test relationships
         if film_count > 0:
             film = AllFilms.objects.first()
-            print(f"\n✓ Testing relationships with: {film.film_name}")
+            print(f"\nTesting relationships with: {film.film_name}")
             if film.director_id:
                 print(f"  - Director: {film.director_id.director_name}")
             if film.genre_id:
@@ -83,7 +83,7 @@ def test_models():
         
         return True
     except Exception as e:
-        print(f"❌ Models error: {e}")
+        print(f"Models error: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -101,10 +101,10 @@ def test_api_endpoints():
         response = testdb(request)
         data = json.loads(response.content)
         results['testdb'] = response.status_code == 200 and data.get('connected')
-        print(f"{'✓' if results['testdb'] else '❌'} /api/testdb - Status: {response.status_code}")
+        print(f"{'PASS' if results['testdb'] else 'FAIL'} /api/testdb - Status: {response.status_code}")
     except Exception as e:
         results['testdb'] = False
-        print(f"❌ /api/testdb - Error: {e}")
+        print(f"FAIL /api/testdb - Error: {e}")
     
     # Test genres
     try:
@@ -113,10 +113,10 @@ def test_api_endpoints():
         data = json.loads(response.content)
         results['genres'] = response.status_code == 200 and data.get('success')
         genre_count = len(data.get('genres', []))
-        print(f"{'✓' if results['genres'] else '❌'} /api/genres - Status: {response.status_code}, Genres: {genre_count}")
+        print(f"{'PASS' if results['genres'] else 'FAIL'} /api/genres - Status: {response.status_code}, Genres: {genre_count}")
     except Exception as e:
         results['genres'] = False
-        print(f"❌ /api/genres - Error: {e}")
+        print(f"FAIL /api/genres - Error: {e}")
     
     # Test actors
     try:
@@ -125,10 +125,10 @@ def test_api_endpoints():
         data = json.loads(response.content)
         results['actors'] = response.status_code == 200 and data.get('success')
         actor_count = len(data.get('actors', []))
-        print(f"{'✓' if results['actors'] else '❌'} /api/actors - Status: {response.status_code}, Actors: {actor_count}")
+        print(f"{'PASS' if results['actors'] else 'FAIL'} /api/actors - Status: {response.status_code}, Actors: {actor_count}")
     except Exception as e:
         results['actors'] = False
-        print(f"❌ /api/actors - Error: {e}")
+        print(f"FAIL /api/actors - Error: {e}")
     
     # Test movies
     try:
@@ -137,10 +137,10 @@ def test_api_endpoints():
         data = json.loads(response.content)
         results['movies'] = response.status_code == 200 and data.get('success')
         movie_count = len(data.get('movies', []))
-        print(f"{'✓' if results['movies'] else '❌'} /api/movies - Status: {response.status_code}, Movies: {movie_count}")
+        print(f"{'PASS' if results['movies'] else 'FAIL'} /api/movies - Status: {response.status_code}, Movies: {movie_count}")
     except Exception as e:
         results['movies'] = False
-        print(f"❌ /api/movies - Error: {e}")
+        print(f"FAIL /api/movies - Error: {e}")
         import traceback
         traceback.print_exc()
     
@@ -168,10 +168,10 @@ def test_filtering():
             success = response.status_code == 200 and data.get('success')
             count = len(data.get('movies', []))
             results[name] = success
-            print(f"{'✓' if success else '❌'} {name}: {count} movies found")
+            print(f"{'PASS' if success else 'FAIL'} {name}: {count} movies found")
         except Exception as e:
             results[name] = False
-            print(f"❌ {name}: Error - {e}")
+            print(f"FAIL {name}: Error - {e}")
     
     return all(results.values())
 
@@ -193,7 +193,7 @@ def main():
         try:
             results[name] = test_func()
         except Exception as e:
-            print(f"\n❌ {name} failed with exception: {e}")
+            print(f"\nFAIL {name} failed with exception: {e}")
             results[name] = False
     
     # Summary
@@ -201,15 +201,15 @@ def main():
     
     all_passed = all(results.values())
     for name, passed in results.items():
-        status = "✓ PASS" if passed else "❌ FAIL"
+        status = "PASS" if passed else "FAIL"
         print(f"{status} - {name}")
     
     print("\n" + "=" * 60)
     if all_passed:
-        print("✅ ALL TESTS PASSED - Integration successful!")
+        print("ALL TESTS PASSED - Integration successful!")
         return 0
     else:
-        print("❌ SOME TESTS FAILED - Please check the errors above")
+        print("SOME TESTS FAILED - Please check the errors above")
         return 1
 
 if __name__ == '__main__':

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
-Script to update TV shows data from the new tv_shows_only_multi_year.csv file.
-This will clear existing shows and re-import from the new file.
+Update TV shows data from tv_shows_only_multi_year.csv.
+Clears existing shows and re-imports from the new file.
 """
 import os
 import sys
@@ -23,7 +23,7 @@ def clear_shows():
     count = AllShows.objects.count()
     AllShows.objects.all().delete()
     
-    print(f"✓ Cleared {count} shows")
+    print(f"Cleared {count} shows")
 
 def reimport_shows():
     """Re-import shows from the new CSV file"""
@@ -36,7 +36,7 @@ def reimport_shows():
     
     csv_file = Path('data/csv/tv_shows_only_multi_year.csv')
     if not csv_file.exists():
-        print(f"❌ File not found: {csv_file}")
+        print(f"File not found: {csv_file}")
         return False
     
     count = import_shows(csv_file)
@@ -47,7 +47,6 @@ if __name__ == '__main__':
     print("Update TV Shows Data")
     print("=" * 60)
     print()
-    print("This will:")
     print("  1. Clear all existing shows")
     print("  2. Re-import from tv_shows_only_multi_year.csv")
     print()
@@ -64,14 +63,14 @@ if __name__ == '__main__':
         if success:
             from api.models import AllShows
             print("\n" + "=" * 60)
-            print("✅ TV Shows updated successfully!")
+            print("TV Shows updated successfully!")
             print(f"   Total shows: {AllShows.objects.count()}")
             print("=" * 60)
         else:
-            print("\n❌ Import failed or no data imported")
+            print("\nImport failed or no data imported")
             sys.exit(1)
     except Exception as e:
-        print(f"\n❌ Error: {e}")
+        print(f"\nError: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

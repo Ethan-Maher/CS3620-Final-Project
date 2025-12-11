@@ -1,11 +1,7 @@
 #!/usr/bin/env python
 """
-Script to fix data separation - ensures movies come from letterboxd_movies_dataset.csv
+Fix data separation - ensures movies come from letterboxd_movies_dataset.csv
 and shows come from tv_only.csv only.
-
-This will:
-1. Clear AllFilms and AllShows tables
-2. Re-import data based on filename (not column detection)
 """
 import os
 import sys
@@ -29,12 +25,11 @@ def clear_data():
     AllFilms.objects.all().delete()
     AllShows.objects.all().delete()
     
-    print("✓ Data cleared")
+    print("Data cleared")
 
 def reimport_correctly():
     """Re-import data based on filename"""
     print("\nRe-importing data based on filename...")
-    print("This ensures:")
     print("  - letterboxd_movies_dataset.csv → AllFilms (movies)")
     print("  - tv_only.csv → AllShows (shows)")
     print()
@@ -48,7 +43,6 @@ if __name__ == '__main__':
     print("Fix Data Separation")
     print("=" * 60)
     print()
-    print("This will:")
     print("  1. Clear all existing films and shows")
     print("  2. Re-import from CSV files based on filename")
     print()
@@ -62,10 +56,10 @@ if __name__ == '__main__':
         clear_data()
         reimport_correctly()
         print("\n" + "=" * 60)
-        print("✅ Data separation fixed!")
+        print("Data separation fixed!")
         print("=" * 60)
     except Exception as e:
-        print(f"\n❌ Error: {e}")
+        print(f"\nError: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

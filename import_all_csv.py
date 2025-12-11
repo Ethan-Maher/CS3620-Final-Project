@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
-Automatically import all CSV files from the data/csv folder.
-This script detects the file type and imports accordingly.
+Import all CSV files from the data/csv folder.
+Detects file type and imports accordingly.
 
 Usage: python import_all_csv.py
 """
@@ -17,7 +17,7 @@ django.setup()
 
 from api.models import (
     MovieGenre, MovieDirector, MovieLanguage, AllFilms, Actors,
-    ShowGenre, ShowCertificate, AllShows, ActedIn
+    ShowGenre, ShowCertificate, AllShows, ActedIn, AuditLog
 )
 
 # Get the CSV folder path
@@ -75,7 +75,7 @@ def detect_file_type(csv_file):
 
 def import_directors(csv_file):
     """Import directors from CSV"""
-    print(f"\n📁 Importing directors from: {csv_file.name}")
+    print(f"\nImporting directors from: {csv_file.name}")
     count = 0
     errors = 0
     
@@ -92,20 +92,20 @@ def import_directors(csv_file):
                         )
                         if created:
                             count += 1
-                            print(f"  ✓ Created: {director_name}")
+                            print(f"  Created: {director_name}")
                     except Exception as e:
                         errors += 1
-                        print(f"  ⚠ Error on row {row_num}: {e}")
+                        print(f"  Error on row {row_num}: {e}")
         
-        print(f"  ✓ Imported {count} directors ({errors} errors)")
+        print(f"  Imported {count} directors ({errors} errors)")
         return count
     except Exception as e:
-        print(f"  ❌ Failed to import: {e}")
+        print(f"  Failed to import: {e}")
         return 0
 
 def import_genres(csv_file):
     """Import genres from CSV"""
-    print(f"\n📁 Importing genres from: {csv_file.name}")
+    print(f"\nImporting genres from: {csv_file.name}")
     count = 0
     errors = 0
     
@@ -122,20 +122,24 @@ def import_genres(csv_file):
                         )
                         if created:
                             count += 1
-                            print(f"  ✓ Created: {genre_name}")
+                            print(f"  Created: {genre_name}")
                     except Exception as e:
                         errors += 1
-                        print(f"  ⚠ Error on row {row_num}: {e}")
+                        print(f"  Error on row {row_num}: {e}")
         
-        print(f"  ✓ Imported {count} genres ({errors} errors)")
+        print(f"  Imported {count} genres ({errors} errors)")
         return count
     except Exception as e:
-        print(f"  ❌ Failed to import: {e}")
+        print(f"  Failed to import: {e}")
         return 0
 
 def import_films(csv_file):
     """Import films from CSV"""
-    print(f"\n📁 Importing films from: {csv_file.name}")
+    print(f"\nImporting films from: {csv_file.name}")
+    from api.models import AuditLog
+    AuditLog.objects.create(
+        changes_to_data=f"Data import started: Importing films from {csv_file.name}"
+    )
     count = 0
     errors = 0
     
@@ -234,23 +238,33 @@ def import_films(csv_file):
                                     )
                     else:
                         if count < 10:  # Only show first few duplicates
-                            print(f"  ⊙ Already exists: {film_name}")
+                            print(f"  Already exists: {film_name}")
                         
                 except Exception as e:
                     errors += 1
-                    print(f"  ⚠ Error on row {row_num}: {e}")
+                    print(f"  Error on row {row_num}: {e}")
         
-        print(f"  ✓ Imported {count} films ({errors} errors)")
+        print(f"  Imported {count} films ({errors} errors)")
+        if count > 0:
+            AuditLog.objects.create(
+                changes_to_data=f"Data import completed: Imported {count} films from {csv_file.name} ({errors} errors)"
+            )
         return count
     except Exception as e:
-        print(f"  ❌ Failed to import: {e}")
+        print(f"  Failed to import: {e}")
         import traceback
         traceback.print_exc()
+        AuditLog.objects.create(
+            changes_to_data=f"Data import failed: Error importing films from {csv_file.name} - {str(e)}"
+        )
         return 0
 
 def import_shows(csv_file):
     """Import shows from CSV"""
-    print(f"\n📁 Importing shows from: {csv_file.name}")
+    print(f"\nImporting shows from: {csv_file.name}")
+    AuditLog.objects.create(
+        changes_to_data=f"Data import started: Importing shows from {csv_file.name}"
+    )
     count = 0
     errors = 0
     
@@ -353,16 +367,23 @@ def import_shows(csv_file):
                                     )
                     else:
                         if count < 10:
-                            print(f"  ⊙ Already exists: {show_name}")
+                            print(f"  Already exists: {show_name}")
                         
                 except Exception as e:
                     errors += 1
-                    print(f"  ⚠ Error on row {row_num}: {e}")
+                    print(f"  Error on row {row_num}: {e}")
         
-        print(f"  ✓ Imported {count} shows ({errors} errors)")
+        print(f"  Imported {count} shows ({errors} errors)")
+        if count > 0:
+            AuditLog.objects.create(
+                changes_to_data=f"Data import completed: Imported {count} shows from {csv_file.name} ({errors} errors)"
+            )
         return count
     except Exception as e:
-        print(f"  ❌ Failed to import: {e}")
+        print(f"  Failed to import: {e}")
+        AuditLog.objects.create(
+            changes_to_data=f"Data import failed: Error importing shows from {csv_file.name} - {str(e)}"
+        )
         import traceback
         traceback.print_exc()
         return 0
@@ -375,10 +396,10 @@ def main():
     
     # Check if folder exists
     if not CSV_FOLDER.exists():
-        print(f"\n❌ Folder not found: {CSV_FOLDER}")
+        print(f"\nFolder not found: {CSV_FOLDER}")
         print(f"Creating folder...")
         CSV_FOLDER.mkdir(parents=True, exist_ok=True)
-        print(f"✓ Created folder: {CSV_FOLDER}")
+        print(f"Created folder: {CSV_FOLDER}")
         print(f"\nPlease place your CSV files in: {CSV_FOLDER}")
         return
     
@@ -386,7 +407,7 @@ def main():
     csv_files = list(CSV_FOLDER.glob('*.csv'))
     
     if not csv_files:
-        print(f"\n⚠ No CSV files found in: {CSV_FOLDER}")
+        print(f"\nNo CSV files found in: {CSV_FOLDER}")
         print(f"\nPlease place your CSV files in this folder and run again.")
         return
     
@@ -433,17 +454,21 @@ def main():
     
     total = sum(total_imported.values())
     if total > 0:
-        print(f"\n✅ Successfully imported {total} total records!")
+        print(f"\nSuccessfully imported {total} total records!")
+        # Log to audit log
+        AuditLog.objects.create(
+            changes_to_data=f"Data import completed: {total_imported['directors']} directors, {total_imported['genres']} genres, {total_imported['films']} films, {total_imported['shows']} shows"
+        )
     else:
-        print(f"\n⚠ No new records imported (may already exist)")
+        print(f"\nNo new records imported (may already exist)")
 
 if __name__ == '__main__':
     try:
         main()
     except KeyboardInterrupt:
-        print("\n\n⚠ Import cancelled by user")
+        print("\n\nImport cancelled by user")
     except Exception as e:
-        print(f"\n❌ Error: {e}")
+        print(f"\nError: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

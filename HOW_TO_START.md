@@ -38,8 +38,8 @@ python import_all_csv.py
 
 **Expected output:**
 ```
-✓ Imported 15549 films
-✓ Imported 605 shows
+Imported 15549 films
+Imported 605 shows
 ```
 
 ### Part 2: Node.js Frontend (2 minutes)
@@ -91,8 +91,8 @@ Visit: **http://localhost:3000**
 ## What Files Are Needed?
 
 **Required CSV files** (must be in `data/csv/` folder):
-- ✅ `letterboxd_movies_dataset.csv` - Movies data
-- ✅ `tv_shows_only_multi_year.csv` - TV Shows data
+- `letterboxd_movies_dataset.csv` - Movies data
+- `tv_shows_only_multi_year.csv` - TV Shows data
 
 **If CSV files are missing:**
 - The import will fail or show 0 records
@@ -115,12 +115,12 @@ Visit: **http://localhost:3000**
 ## File Checklist
 
 Before sharing the repo, make sure these are included:
-- ✅ `data/csv/letterboxd_movies_dataset.csv`
-- ✅ `data/csv/tv_shows_only_multi_year.csv`
-- ✅ `requirements.txt`
-- ✅ `package.json`
-- ✅ All Python files in `api/` and `databases_proj/`
-- ✅ All React files in `src/`
+- `data/csv/letterboxd_movies_dataset.csv`
+- `data/csv/tv_shows_only_multi_year.csv`
+- `requirements.txt`
+- `package.json`
+- All Python files in `api/` and `databases_proj/`
+- All React files in `src/`
 
 **Note:** `db.sqlite3` will be created automatically, don't need to include it.
 

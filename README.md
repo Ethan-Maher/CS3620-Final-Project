@@ -1,6 +1,7 @@
 # WhatToWatch
 
-Movie and TV show recommendation website with search and filtering.
+WhatToWatch is a movie and TV show recommendation system. The user can enter their information to create an account on the platform. Once your account is created, you can now start searching the platform for something to watch! There are two sections to the platform, a TV show section and a movie section. If the user wants to watch something, they can sort by different features to help them decide. Both sections of the website allow the user to filter by genre, certification, and decade released. The user can also add movies to a watch later list to save interesting movies that they might want to come back to. The website also has a favorites section where the user can select their favorite genre, actor, and decade to get a few recommendations for a movie or show to watch. Finally, the app has a review system where users can rate and review the app.
+
 
 ## Quick Start
 
@@ -42,10 +43,10 @@ Make sure these CSV files are in `data/csv/`:
 - `letterboxd_movies_dataset.csv`
 - `tv_shows_only_multi_year.csv`
 
-## Troubleshooting
 
-- **No data showing?** Run `python import_all_csv.py`
-- **Port in use?** Change port: `python manage.py runserver 8001`
-- **Module errors?** Make sure virtual environment is activated
+## Datasets
+https://www.kaggle.com/datasets/kutayahin/letterboxd-movies-dataset/data
 
-For detailed setup instructions, see `HOW_TO_START.md`.
+https://www.kaggle.com/code/payamamanat/imdb-movies
+
+https://www.kaggle.com/datasets/shivamb/netflix-shows
